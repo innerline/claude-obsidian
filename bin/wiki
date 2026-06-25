@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# wiki — claude-obsidian engine CLI dispatcher.
+#
+# Single entry point for any agent that can shell out (Claude, Pi, Hermes).
+# Targets the vault in $WIKI_VAULT, or --vault <path>, or (if neither is set)
+# the path recorded in .served-vault at the repo root (this machine's served
+# vault). Delegates all real work to scripts/engine.py.
+#
+# Examples:
+#   wiki status
+#   wiki route concept "Sparse Retrieval"
+#   wiki lock acquire wiki/resources/concepts/Foo.md
+#   wiki write wiki/resources/concepts/Foo.md --stdin < page.md
+#   wiki lint --json
+#   wiki commit
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+ENGINE="$REPO_ROOT/scripts/engine.py"
+
+# Default vault: $WIKI_VAULT, else the path in .served-vault (this machine).
+if [ -z "${WIKI_VAULT:-}" ] && [ -f "$REPO_ROOT/.served-vault" ]; then
+  export WIKI_VAULT="$(cat "$REPO_ROOT/.served-vault")"
+fi
+
+# Pre-extract --vault <path> from anywhere in argv so both
+# `wiki --vault X <cmd>` and `wiki <cmd> --vault X` work. (engine.py only
+# accepts --vault after the subcommand; pulling it out here normalizes that.)
+ARGS=()
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --vault)    export WIKI_VAULT="$2"; shift 2 ;;
+    --vault=*)  export WIKI_VAULT="${1#--vault=}"; shift ;;
+    *)          ARGS+=("$1"); shift ;;
+  esac
+done
+
+exec python3 "$ENGINE" "${ARGS[@]}"

@@ -68,7 +68,53 @@ Do NOT read the wiki for general coding questions or things already in this proj
 
 ## Concurrency (v1.7+)
 
-`scripts/wiki-lock.sh` provides per-file advisory locks for safe multi-writer ingest. Every wiki page write should be guarded by `wiki-lock acquire`/`release`. Stale-after default is 60s; cross-process release allowed by design. The PostToolUse hook defers `git add` while locks are held. Closes the latent multi-writer corruption hole from v1.6.
+Two locking mechanisms protect against multi-writer corruption:
+
+**Shell scripts:** `scripts/wiki-lock.sh` provides per-file advisory locks for bash-based operations. Use `wiki-lock acquire`/`release` to guard writes. Stale-after default is 60s; cross-process release allowed by design.
+
+**Engine layer:** `scripts/engine.py` exposes `lock_acquire`, `lock_release`, and `lock_list` primitives to Python, CLI (`bin/wiki`), and MCP (`scripts/mcp_server.py`) interfaces. These use the same age-based semantics and cross-process cooperative release model.
+
+**Git safety:** The `engine.commit()` primitive (and Claude's PostToolUse hook) defers staging while locks are held, preventing half-written pages from being committed.
+
+## Engine (v1.7+)
+
+The `scripts/engine.py` layer provides vault-agnostic primitives for all write/maintain operations. It decouples vault access from the scripts directory, enabling cross-agent vault sharing.
+
+**Core primitives:**
+- `vault_root()` - Vault path resolution via $WIKI_VAULT
+- `route(ctype, name)` - Path routing for new content
+- `lock_acquire/release/list()` - Per-file advisory locks (age-based, cross-process)
+- `write/read()` - Atomic I/O with automatic locking
+- `log/hot/index()` - Cache and index access
+- `commit()` - Agent-neutral git commit
+- `lint()` - Mechanical health check
+
+The CLI (`bin/wiki`) and MCP server (`scripts/mcp_server.py`) expose these primitives to shell and LLM tools. See [docs/engine-guide.md](docs/engine-guide.md) for complete API reference.
+
+## CLI (v1.7+)
+
+The `bin/wiki` CLI provides direct shell access to vault operations. Any agent that can shell out (Claude, Pi, Hermes) can use it.
+
+```bash
+# Vault status
+wiki status
+
+# Route a new content type
+wiki route concept "Sparse Retrieval"
+
+# Atomic write with lock
+wiki write wiki/resources/concepts/Foo.md --stdin < page.md
+
+# Manual locking
+wiki lock acquire wiki/concepts/Lock-Test.md
+wiki lock release wiki/concepts/Lock-Test.md
+
+# Health checks
+wiki lint --json
+wiki commit
+```
+
+The CLI targets the vault in `$WIKI_VAULT`, or `--vault <path>`, or the path in `.served-vault` (machine-local pointer to this machine's served vault).
 
 ## Methodology Modes (v1.8+)
 

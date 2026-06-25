@@ -55,7 +55,8 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
-VAULT_ROOT = Path(__file__).resolve().parent.parent
+_DEFAULT_VAULT_ROOT = Path(__file__).resolve().parent.parent
+VAULT_ROOT = Path(os.environ["WIKI_VAULT"]).resolve() if os.environ.get("WIKI_VAULT") else _DEFAULT_VAULT_ROOT
 META_DIR = VAULT_ROOT / ".vault-meta"
 EMBED_CACHE_PATH = META_DIR / "embed-cache.json"
 CACHE_LOCK = META_DIR / ".embed-cache.lock"

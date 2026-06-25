@@ -76,7 +76,7 @@
 
 set -euo pipefail
 
-VAULT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+VAULT_ROOT="${WIKI_VAULT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 META_DIR="${VAULT_ROOT}/.vault-meta"
 LOCK_DIR="${META_DIR}/locks"
 META_LOCK="${META_DIR}/.wiki-lock.meta"
@@ -86,8 +86,8 @@ STALE_AFTER_SEC=60
 die() { echo "ERR: $*" >&2; exit "${2:-2}"; }
 log() { echo "$*" >&2; }
 
-# Allow tests / non-default vault roots to override
-if [ -n "${WIKI_LOCK_VAULT:-}" ]; then
+# Back-compat: WIKI_LOCK_VAULT override (WIKI_VAULT at the line above takes precedence)
+if [ -z "${WIKI_VAULT:-}" ] && [ -n "${WIKI_LOCK_VAULT:-}" ]; then
   VAULT_ROOT="$WIKI_LOCK_VAULT"
   META_DIR="${VAULT_ROOT}/.vault-meta"
   LOCK_DIR="${META_DIR}/locks"

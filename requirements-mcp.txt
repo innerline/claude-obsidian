@@ -1,0 +1,8 @@
+# MCP server dependency for scripts/mcp_server.py.
+#
+# Installed on demand by the launcher (no venv to manage):
+#   uv run --with mcp python scripts/mcp_server.py
+#
+# Or pinned into a dedicated venv:
+#   uv venv && uv pip install -r requirements-mcp.txt
+mcp>=1.0

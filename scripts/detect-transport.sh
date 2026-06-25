@@ -28,7 +28,7 @@
 
 set -euo pipefail
 
-VAULT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+VAULT_ROOT="${WIKI_VAULT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 META_DIR="${VAULT_ROOT}/.vault-meta"
 OUTPUT_FILE="${META_DIR}/transport.json"
 STALE_AFTER_DAYS=7

@@ -21,6 +21,9 @@
 .DS_Store
 Thumbs.db
 
+# claude-obsidian engine: machine-local pointer to the served vault (bin/wiki)
+.served-vault
+
 # Python
 __pycache__/
 *.pyc
