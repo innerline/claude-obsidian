@@ -41,12 +41,14 @@ Exit codes:
 import argparse
 import json
 import math
+import os
 import re
 import sys
 from datetime import date, datetime, timezone
 from pathlib import Path
 
-VAULT_ROOT = Path(__file__).resolve().parent.parent
+_DEFAULT_VAULT_ROOT = Path(__file__).resolve().parent.parent
+VAULT_ROOT = Path(os.environ["WIKI_VAULT"]).resolve() if os.environ.get("WIKI_VAULT") else _DEFAULT_VAULT_ROOT
 WIKI_DIR = VAULT_ROOT / "wiki"
 
 EXCLUDE_TYPES = {"meta", "fold"}
