@@ -94,9 +94,17 @@ def status() -> Dict:
     if tp.exists():
         try:
             t = json.loads(tp.read_text())
-            out["transport"] = t.get("preferred")
-        except Exception:
+            out["transport"] = t.get("preferred", "unknown")
+        except json.JSONDecodeError as e:
+            print(f"WARN: transport.json is corrupted: {e}", file=sys.stderr)
             out["transport"] = "unknown"
+            out["transport_error"] = "json_decode_error"
+        except OSError as e:
+            print(f"WARN: cannot read transport.json: {e}", file=sys.stderr)
+            out["transport"] = "unknown"
+            out["transport_error"] = str(e)
+    else:
+        out["transport"] = "unknown"
     out["locks_held"] = len(lock_list().get("locks", []))
     out["git"] = (vr / ".git").exists()
     return out
@@ -140,15 +148,24 @@ def _read_lock(rel: str) -> Optional[Dict]:
         return None
     try:
         return json.loads(lf.read_text())
-    except Exception:
-        return {"path": rel, "pid": -1, "host": "?", "acquired_at": "1970-01-01T00:00:00Z", "corrupt": True}
+    except json.JSONDecodeError as e:
+        print(f"WARN: Lock file corrupted for {rel}: {e}", file=sys.stderr)
+        return {"path": rel, "pid": -1, "host": "?", "acquired_at": "1970-01-01T00:00:00Z", "corrupt": True, "error": "json_decode"}
+    except OSError as e:
+        print(f"WARN: Cannot read lock file for {rel}: {e}", file=sys.stderr)
+        return {"path": rel, "pid": -1, "host": "?", "acquired_at": "1970-01-01T00:00:00Z", "corrupt": True, "error": str(e)}
 
 
 def _is_stale(rec: Dict) -> bool:
+    acquired_at = rec.get("acquired_at", "")
+    if not acquired_at or not isinstance(acquired_at, str):
+        print(f"WARN: Lock has invalid acquired_at: {acquired_at!r}, treating as stale", file=sys.stderr)
+        return True
     try:
-        acquired = datetime.strptime(rec.get("acquired_at", ""), "%Y-%m-%dT%H:%M:%SZ")
+        acquired = datetime.strptime(acquired_at, "%Y-%m-%dT%H:%M:%SZ")
         age = (datetime.now(timezone.utc) - acquired.replace(tzinfo=timezone.utc)).total_seconds()
-    except Exception:
+    except ValueError as e:
+        print(f"WARN: Lock has malformed timestamp {acquired_at!r}: {e}, treating as stale", file=sys.stderr)
         return True
     return age > STALE_AFTER
 
@@ -203,13 +220,34 @@ def lock_list() -> Dict:
 # ── path safety + file I/O ───────────────────────────────────────────────────
 def _safe_rel(rel: str) -> str:
     """Normalize and validate a vault-relative path; reject escapes."""
+    if not rel:
+        die("path cannot be empty")
+    if rel.startswith("/"):
+        die("path must be vault-relative, not absolute")
+    if '\n' in rel or '\r' in rel:
+        die("path may not contain newlines or carriage returns")
+
     rel = rel.lstrip("/")
-    full = (vault_root() / rel).resolve()
+    vr = vault_root()
+
+    # Check for symlink escape before full resolution
+    # (matches wiki-lock.sh lines 124-140)
     try:
-        full.relative_to(vault_root())
+        resolved = vr.resolve()
+        target = (vr / rel).resolve()
+        if resolved != target:
+            common = os.path.commonpath([resolved, target])
+            if common != resolved:
+                die(f"path resolves outside vault via symlink: {rel}")
+    except (ValueError, OSError):
+        pass  # Non-existent path - allow it
+
+    full = (vr / rel).resolve()
+    try:
+        full.relative_to(vr)
     except ValueError:
         die(f"path escapes vault root: {rel}")
-    return str(full.relative_to(vault_root()))
+    return str(full.relative_to(vr))
 
 
 def read(rel: str) -> Dict:
@@ -240,7 +278,9 @@ def log_append(detail: str, op: str = "-", agent: Optional[str] = None) -> Dict:
     ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M")
     row = f"| {ts} | {agent} | {op} | {detail} |"
     logp = vault_root() / "wiki" / "log.md"
-    lock_acquire("wiki/log.md", timeout=30)
+    acquired = lock_acquire("wiki/log.md", timeout=30)
+    if not acquired.get("acquired"):
+        return {"logged": False, "reason": "lock timeout", "held_by": acquired.get("held_by")}
     try:
         lines = logp.read_text().splitlines() if logp.exists() else ["# Log", "", "| Date | Agent | Op | Detail |", "|------|-------|----|--------|"]
         # insert after the header table separator (first line that is the "|---|" row), else after line 0

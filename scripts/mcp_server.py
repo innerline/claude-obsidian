@@ -81,10 +81,14 @@ def wiki_write(path: str, content: str) -> dict:
         return {"written": False, "reason": "lock acquire failed", "acquire": acquired}
     try:
         result = engine.write(path, content, auto_commit=False)
+        result["commit"] = engine.commit()
+        return result
+    except OSError as e:
+        return {"written": False, "reason": "IO error", "error": str(e), "error_type": "OSError"}
+    except Exception as e:
+        return {"written": False, "reason": "unexpected error", "error": str(e), "error_type": type(e).__name__}
     finally:
         engine.lock_release(path)
-    result["commit"] = engine.commit()
-    return result
 
 
 @mcp.tool()
