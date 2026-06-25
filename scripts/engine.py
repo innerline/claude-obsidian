@@ -124,7 +124,9 @@ def _locks_dir() -> Path:
 @contextmanager
 def _meta_lock():
     """Context manager: exclusive fcntl on a meta file to serialize record I/O."""
-    f = open(vault_root() / ".vault-meta" / ".engine.meta.lock", "w")
+    meta = vault_root() / ".vault-meta" / ".engine.meta.lock"
+    meta.parent.mkdir(parents=True, exist_ok=True)  # .vault-meta may not exist yet
+    f = open(meta, "w")
     try:
         fcntl.flock(f.fileno(), fcntl.LOCK_EX)
         yield f
@@ -236,7 +238,10 @@ def _safe_rel(rel: str) -> str:
         resolved = vr.resolve()
         target = (vr / rel).resolve()
         if resolved != target:
-            common = os.path.commonpath([resolved, target])
+            # os.path.commonpath returns a str; coerce to Path so the
+            # comparison is type-consistent (str != Path is always True,
+            # which would wrongly reject every nested path).
+            common = Path(os.path.commonpath([resolved, target]))
             if common != resolved:
                 die(f"path resolves outside vault via symlink: {rel}")
     except (ValueError, OSError):
