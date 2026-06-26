@@ -46,8 +46,7 @@ OLLAMA_TIMEOUT_SEC = 3
 EMBED_TIMEOUT_SEC = 30
 MAX_RESPONSE_BYTES = 4 * 1024 * 1024  # 4 MB; embeddings can be ~10 KB each
 
-_DEFAULT_VAULT_ROOT = Path(__file__).resolve().parent.parent
-VAULT_ROOT = Path(os.environ["WIKI_VAULT"]).resolve() if os.environ.get("WIKI_VAULT") else _DEFAULT_VAULT_ROOT
+VAULT_ROOT = Path(__file__).resolve().parent.parent
 WIKI_DIR = VAULT_ROOT / "wiki"
 META_DIR = VAULT_ROOT / ".vault-meta"
 CACHE_PATH = META_DIR / "tiling-cache.json"

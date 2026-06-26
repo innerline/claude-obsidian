@@ -30,15 +30,13 @@ Exit codes:
 
 import argparse
 import json
-import os
 import re
 import sys
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-_DEFAULT_VAULT_ROOT = Path(__file__).resolve().parent.parent
-VAULT_ROOT = Path(os.environ["WIKI_VAULT"]).resolve() if os.environ.get("WIKI_VAULT") else _DEFAULT_VAULT_ROOT
+VAULT_ROOT = Path(__file__).resolve().parent.parent
 META_DIR = VAULT_ROOT / ".vault-meta"
 MODE_PATH = META_DIR / "mode.json"
 

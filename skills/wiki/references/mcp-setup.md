@@ -1,6 +1,6 @@
 # MCP Setup
 
-MCP lets Claude read and write vault notes directly without copy-paste. Five options ordered from simplest to most featureful.
+MCP lets Claude read and write vault notes directly without copy-paste. Four options ordered from simplest to most featureful.
 
 > [!tip] Recommendation
 > If you have **Obsidian v1.12 or newer**, start with **Option D: Obsidian CLI**. It needs no MCP server, no plugins, and no TLS workarounds. Use Options A or B only if you need persistent MCP integration or are on an older Obsidian version.
@@ -111,38 +111,6 @@ obsidian-cli search /path/to/vault "query term"
 **When to use Options A/B/C instead**: If you need persistent semantic search, frontmatter patching, or are on Obsidian < v1.12.
 
 The `kepano/obsidian-skills` repo includes an `obsidian-cli` skill that wraps these commands as reusable patterns. Install it alongside this plugin for first-class CLI support.
-
----
-
-## Option E: agentloop MCP server (vault-agnostic, cross-agent)
-
-Uses the native FastMCP server at `scripts/mcp_server.py`. Exposes all engine primitives as `wiki_*` tools. No Obsidian plugin or external server needed—just the claude-obsidian repo.
-
-```bash
-claude mcp add agentloop -e WIKI_VAULT=/path/to/your/vault -- \
-    uv run --with mcp python /absolute/path/to/claude-obsidian/scripts/mcp_server.py
-```
-
-Replace `/absolute/path/to/claude-obsidian` with the actual repo path and `/path/to/your/vault` with your vault path.
-
-**Available tools (13):**
-- `wiki_status()` - Vault + engine status
-- `wiki_route(content_type, name)` - Filing path for new content
-- `wiki_lock_acquire/release/list()` - Per-file advisory locks
-- `wiki_write/read()` - Atomic I/O with locking
-- `wiki_log(detail, op, agent)` - Append to wiki/log.md
-- `wiki_hot_get/set()` - Hot cache (wiki/hot.md)
-- `wiki_index()` - Read master index (wiki/index.md)
-- `wiki_lint()` - Mechanical health check
-- `wiki_commit(message)` - Git stage + commit
-
-**Why prefer this**:
-- No external dependencies beyond `mcp` (fetched by uv on demand)
-- Vault-agnostic: serves any vault via WIKI_VAULT
-- Cross-agent: Pi, Hermes, Claude can all access the same vault
-- Agent-neutral: no Claude-specific hooks
-
-**When to use Options A-D instead**: If you prefer REST API integration or want to use existing MCP server infrastructure.
 
 ---
 

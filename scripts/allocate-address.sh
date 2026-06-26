@@ -19,7 +19,7 @@
 
 set -euo pipefail
 
-VAULT_ROOT="${WIKI_VAULT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+VAULT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COUNTER_FILE="${VAULT_ROOT}/.vault-meta/address-counter.txt"
 LOCK_FILE="${VAULT_ROOT}/.vault-meta/.address.lock"
 WIKI_DIR="${VAULT_ROOT}/wiki"

@@ -52,13 +52,11 @@ Exit codes:
 import argparse
 import importlib.util
 import json
-import os
 import sys
 from pathlib import Path
 
-SCRIPTS_DIR = Path(__file__).resolve().parent
-_DEFAULT_VAULT_ROOT = SCRIPTS_DIR.parent
-VAULT_ROOT = Path(os.environ["WIKI_VAULT"]).resolve() if os.environ.get("WIKI_VAULT") else _DEFAULT_VAULT_ROOT
+VAULT_ROOT = Path(__file__).resolve().parent.parent
+SCRIPTS_DIR = VAULT_ROOT / "scripts"
 META_DIR = VAULT_ROOT / ".vault-meta"
 CHUNKS_DIR = META_DIR / "chunks"
 BM25_INDEX = META_DIR / "bm25" / "index.json"
